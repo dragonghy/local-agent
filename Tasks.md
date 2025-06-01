@@ -1,0 +1,94 @@
+## Task Breakdown
+
+- [x] **Environment Preparation** ✅ COMPLETED
+  - [x] Verify Apple M4 GPU and Metal support (NO CUDA needed for Apple Silicon)
+  - [x] Create a Python virtual environment (venv) and install core dependencies:
+    - [x] Python 3.9.6 (system default)
+    - [x] PyTorch 2.7.0 with MPS (Metal Performance Shaders) support
+    - [x] Model-specific runtimes (Transformers 4.52.4, Accelerate 1.7.0)
+    - [x] Web server framework (FastAPI 0.115.12)
+- [x] **Model Discovery & Selection** ✅ COMPLETED
+  - [x] Compile a list of available checkpoints/options for:
+    - [x] DeepSeek: Math 7B (✅ M4 compatible), Coder 16B/33B (⚠️ 24GB+/32GB+), V3/R1 (❌ too large)
+    - [x] LLaMA 3: 1B/3B (✅ excellent), 8B (✅ recommended), 11B Vision (✅ 24GB+), 70B (⚠️ 32GB+)
+    - [x] Google Gemma 3: 1B/4B (✅ excellent), 12B (✅ 24GB+), 27B (⚠️ 32GB+)
+  - [x] Evaluate relative resource requirements (unified memory) for each model variant.
+  - [x] Choose candidates: LLaMA 3.1 8B, Gemma 3 4B, DeepSeek-Math 7B for initial testing.
+    - **Note**: Actually downloaded DeepSeek-R1-Distill-Qwen 1.5B, Qwen 2.5 1.5B, BLIP models, DeepSeek-VL2-Small, and Whisper base
+  - [x] Download selected model weights and store in a `models/` directory. ✅ COMPLETED
+  - [x] Document source URLs, expected VRAM, and quantization options in `docs/model_selection_guide.md`.
+- [x] **Prepare Local Deployment Plan** ✅ COMPLETED
+  - [x] For each chosen model, outline the loading procedure:
+    - Checkpoint format (e.g., Hugging Face, custom)
+    - Quantization or checkpoint conversion steps (if needed)
+    - Folder structure and naming conventions
+    - Expected GPU/CPU memory usage
+  - [x] Confirm that each model can be loaded in inference mode without errors.
+- [x] **Inference Wrapper** ✅ COMPLETED
+  - [x] Identify existing open-source Python wrappers or inference scripts:
+    - Transformers `pipeline` for LLaMA 3
+    - DeepSeek SDK (if available)
+    - Any community Gemma 3 loader
+  - [x] Create a generic Python script (`inference.py`) that:
+    - Accepts a JSON payload: `{ "model_name": "...", "prompt": "..." }`
+    - Loads the specified model (fallback to CPU if GPU is missing)
+    - Returns a JSON response with generated text (and any metadata)
+    - Handles tokenization, batching, and optional temperature/top-k settings
+  - [x] Add logging to record:
+    - Load time for each model
+    - Time per inference call
+    - Peak GPU/CPU memory consumption (e.g., using `torch.cuda.max_memory_allocated()`)
+- [x] **Sanity & “Intuition” Testing** ✅ COMPLETED
+  - [x] Write a quick test suite (`tests/intuition_tests.py`) to verify:
+    - Each model loads without errors
+    - A simple prompt (e.g., “Hello, world”) returns plausible output
+    - Token count and basic quality (e.g., non-empty string, minimal length)
+  - [x] Automate running these tests after any model update or environment change.
+- [ ] **UI Prototype (Web-First)**
+  - [ ] Choose a lightweight web framework (FastAPI or Flask).
+  - [ ] Implement a single HTML page with:
+    - A text area for user prompt
+    - A dropdown for selecting `model_name`
+    - A “Send” button and a scrollable output area
+  - [ ] Backend endpoint (`POST /chat`) should:
+    - Receive `{ "model_name": "...", "prompt": "..." }`
+    - Call `inference.py` and return model response
+    - Stream partial tokens if supported (for real-time feel)
+  - [ ] Serve static assets (HTML/CSS/JS) from a `static/` folder.
+- [ ] **Benchmark Suite**
+  - [ ] Define benchmark categories:
+    - **Text Conversation**: measure tokens/sec and response latency for chat prompts of varying lengths (e.g., 50, 100, 200 tokens).
+    - **Image Processing** (if model supports vision tasks):
+      - Send a sample image prompt (e.g., “Describe this image”)
+      - Measure inference latency and VRAM usage.
+    - **Audio/Speech** (if supported):
+      - Send a short audio clip (e.g., 5–10 seconds of speech) for transcription or response.
+      - Record CPU usage and latency.
+  - [ ] Implement benchmark scripts (`benchmarks/run_bench.py`) to:
+    - Loop through each model + input type combination
+    - Record:  
+      - Start/end timestamps (for latency)  
+      - Tokens generated/sec (for text)  
+      - Peak GPU/CPU memory usage  
+      - Throughput metrics
+    - Save results to a CSV (`benchmarks/results.csv`).
+  - [ ] Integrate benchmark results into the Web UI:
+    - Add a “Run Benchmark” button.
+    - Display a simple table/chart of metrics (e.g., tokens/sec, avg. latency).
+    - Provide a “Download CSV” link for offline analysis.
+- [ ] **Result Documentation & Archiving**
+  - [ ] Store raw logs and CSV outputs in a `logs/` folder, timestamped per run.
+  - [ ] On the Web UI, include a “Benchmark History” view listing past runs with date/time.
+  - [ ] Summarize key findings in a Markdown file (`docs/benchmark_summary.md`):
+    - Model vs. text throughput comparison chart
+    - GPU memory usage table
+    - Notes on any failures or resource bottlenecks
+- [ ] **Next Steps & Potential Local Applications**
+  - [ ] Based on benchmark outcomes, shortlist feasible use cases:
+    - **On-device Chat Assistant**: Low-VRAM model for offline conversation
+    - **Local Image Captioning/Analysis**: If vision tasks meet latency targets
+    - **Basic Speech Transcription or Voice-Enabled Chat**: If audio throughput is acceptable
+  - [ ] Draft brief feature specs for one or two proofs-of-concept:
+    - Define target latency, model size, and expected user workflow
+    - List required integration points (e.g., microphone input, file upload for images)
+  - [ ] Plan a roadmap for deeper testing (e.g., user studies, extended workload benchmarks).
