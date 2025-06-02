@@ -140,15 +140,13 @@ async function sendMessage() {
     addMessage('user', prompt);
     chatInput.value = '';
     
-    // Show typing indicator
-    const typingMsg = addMessage('assistant', '<span class="typing-indicator"></span>');
-    
     try {
-        let response;
         const model = availableModels.find(m => m.name === currentModel);
         
         if (model && model.type === 'vision-language' && uploadedImage) {
-            // Handle image analysis
+            // Handle image analysis (non-streaming)
+            const typingMsg = addMessage('assistant', '<span class="typing-indicator"></span>');
+            
             const formData = new FormData();
             formData.append('model', currentModel);
             formData.append('file', uploadedImage);
@@ -156,50 +154,135 @@ async function sendMessage() {
                 formData.append('prompt', prompt);
             }
             
-            response = await fetch('/api/image/analyze', {
+            const response = await fetch('/api/image/analyze', {
                 method: 'POST',
                 body: formData
             });
-        } else {
-            // Handle text generation
-            response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: currentModel,
-                    prompt: prompt,
-                    temperature: parseFloat(tempSlider.value),
-                    max_tokens: parseInt(tokensSlider.value)
-                })
-            });
-        }
-        
-        typingMsg.remove();
-        
-        if (response.ok) {
-            const result = await response.json();
-            addMessage('assistant', result.response || result.error || 'No response');
             
-            // Update metrics
-            if (result.generation_time) {
-                document.getElementById('genTime').textContent = `${result.generation_time.toFixed(2)}s`;
-            }
-            if (result.tokens_per_second) {
-                document.getElementById('tokensPerSec').textContent = result.tokens_per_second.toFixed(2);
-            }
-            if (result.tokens_generated) {
-                document.getElementById('tokensGen').textContent = result.tokens_generated;
+            typingMsg.remove();
+            
+            if (response.ok) {
+                const result = await response.json();
+                addMessage('assistant', result.response || result.error || 'No response');
+                
+                // Update metrics
+                if (result.generation_time) {
+                    document.getElementById('genTime').textContent = `${result.generation_time.toFixed(2)}s`;
+                }
+            } else {
+                const error = await response.json();
+                addMessage('assistant', `Error: ${error.detail || 'Unknown error'}`);
             }
         } else {
-            const error = await response.json();
-            addMessage('assistant', `Error: ${error.detail || 'Unknown error'}`);
+            // Handle text generation with streaming
+            await sendStreamingMessage(prompt);
         }
     } catch (error) {
-        typingMsg.remove();
         console.error('Failed to send message:', error);
         addMessage('assistant', 'Failed to get response. Please try again.');
+    }
+}
+
+// Send streaming message
+async function sendStreamingMessage(prompt) {
+    // Create message container for streaming response
+    const assistantMsg = addMessage('assistant', '');
+    const msgContent = assistantMsg.querySelector('p');
+    
+    let fullResponse = '';
+    let startTime = Date.now();
+    let tokensGenerated = 0;
+    
+    try {
+        const response = await fetch('/api/chat/stream', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: currentModel,
+                prompt: prompt,
+                temperature: parseFloat(tempSlider.value),
+                max_tokens: parseInt(tokensSlider.value)
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            msgContent.textContent = `Error: ${error.detail || 'Unknown error'}`;
+            return;
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data.trim()) {
+                        try {
+                            const json = JSON.parse(data);
+                            
+                            if (json.type === 'token') {
+                                fullResponse += json.token;
+                                msgContent.textContent = fullResponse;
+                                tokensGenerated = json.tokens_generated;
+                                
+                                // Update metrics in real-time
+                                document.getElementById('tokensPerSec').textContent = json.tokens_per_second.toFixed(2);
+                                document.getElementById('tokensGen').textContent = tokensGenerated;
+                                
+                                // Scroll to bottom
+                                chatHistory.scrollTop = chatHistory.scrollHeight;
+                            } else if (json.type === 'final') {
+                                // Final metrics
+                                document.getElementById('genTime').textContent = `${json.generation_time.toFixed(2)}s`;
+                                document.getElementById('tokensPerSec').textContent = json.tokens_per_second.toFixed(2);
+                                document.getElementById('tokensGen').textContent = json.tokens_generated;
+                            } else if (json.type === 'error') {
+                                msgContent.textContent = `Error: ${json.error}`;
+                                break;
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse SSE data:', e, data);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Process any remaining buffer
+        if (buffer.trim() && buffer.startsWith('data: ')) {
+            const data = buffer.slice(6);
+            if (data.trim()) {
+                try {
+                    const json = JSON.parse(data);
+                    if (json.type === 'token') {
+                        fullResponse += json.token;
+                        msgContent.textContent = fullResponse;
+                    }
+                } catch (e) {
+                    console.error('Failed to parse final SSE data:', e, data);
+                }
+            }
+        }
+        
+        if (!fullResponse) {
+            msgContent.textContent = 'No response generated.';
+        }
+        
+    } catch (error) {
+        console.error('Streaming error:', error);
+        msgContent.textContent = 'Failed to get streaming response. Please try again.';
     }
 }
 

@@ -9,7 +9,7 @@ import json
 import time
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, AsyncGenerator
 import torch
 from transformers import (
     AutoModelForCausalLM, AutoTokenizer, AutoProcessor,
@@ -160,6 +160,123 @@ class ModelManager:
         except Exception as e:
             logger.error(f"Error loading {model_name}: {str(e)}")
             return False
+    
+    async def generate_text_stream(self, model_name: str, prompt: str, **kwargs) -> AsyncGenerator[Dict[str, Any], None]:
+        """Generate text using a language model with streaming"""
+        if model_name not in self.loaded_models:
+            if not self.load_model(model_name):
+                yield {"type": "error", "error": f"Failed to load model {model_name}"}
+                return
+        
+        model_data = self.loaded_models[model_name]
+        if model_data["type"] != "text":
+            yield {"type": "error", "error": f"Model {model_name} is not a text generation model"}
+            return
+        
+        try:
+            model = model_data["model"]
+            tokenizer = model_data["tokenizer"]
+            
+            # Tokenize input
+            inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
+            
+            # Start timing
+            start_time = time.time()
+            tokens_generated = 0
+            
+            # Generate with streaming
+            with torch.no_grad():
+                # Get generation kwargs
+                gen_kwargs = {
+                    "max_new_tokens": kwargs.get("max_tokens", 256),
+                    "temperature": kwargs.get("temperature", 0.7),
+                    "do_sample": kwargs.get("do_sample", True),
+                    "top_p": kwargs.get("top_p", 0.9),
+                    "pad_token_id": tokenizer.pad_token_id or tokenizer.eos_token_id,
+                }
+                
+                # Initialize generation
+                input_ids = inputs["input_ids"]
+                attention_mask = inputs.get("attention_mask")
+                past_key_values = None
+                generated_tokens = []
+                
+                for i in range(gen_kwargs["max_new_tokens"]):
+                    # Forward pass
+                    if past_key_values is None:
+                        outputs = model(
+                            input_ids=input_ids,
+                            attention_mask=attention_mask,
+                            use_cache=True
+                        )
+                    else:
+                        outputs = model(
+                            input_ids=input_ids[:, -1:],
+                            attention_mask=attention_mask,
+                            past_key_values=past_key_values,
+                            use_cache=True
+                        )
+                    
+                    past_key_values = outputs.past_key_values
+                    logits = outputs.logits[:, -1, :]
+                    
+                    # Apply temperature
+                    if gen_kwargs["temperature"] > 0:
+                        logits = logits / gen_kwargs["temperature"]
+                    
+                    # Sample token
+                    if gen_kwargs["do_sample"]:
+                        probs = torch.nn.functional.softmax(logits, dim=-1)
+                        next_token = torch.multinomial(probs, num_samples=1)
+                    else:
+                        next_token = torch.argmax(logits, dim=-1, keepdim=True)
+                    
+                    # Decode token
+                    token_text = tokenizer.decode(next_token[0], skip_special_tokens=True)
+                    generated_tokens.append(next_token[0].item())
+                    tokens_generated += 1
+                    
+                    # Calculate metrics
+                    elapsed_time = time.time() - start_time
+                    tokens_per_second = tokens_generated / elapsed_time if elapsed_time > 0 else 0
+                    
+                    # Yield token data
+                    yield {
+                        "type": "token",
+                        "token": token_text,
+                        "token_id": next_token[0].item(),
+                        "tokens_generated": tokens_generated,
+                        "tokens_per_second": tokens_per_second,
+                        "elapsed_time": elapsed_time
+                    }
+                    
+                    # Check for EOS
+                    if next_token[0].item() == tokenizer.eos_token_id:
+                        break
+                    
+                    # Update input_ids and attention_mask
+                    input_ids = torch.cat([input_ids, next_token], dim=-1)
+                    if attention_mask is not None:
+                        attention_mask = torch.cat([
+                            attention_mask,
+                            torch.ones((1, 1), dtype=attention_mask.dtype, device=attention_mask.device)
+                        ], dim=-1)
+                
+                # Final metrics
+                total_time = time.time() - start_time
+                final_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+                
+                yield {
+                    "type": "final",
+                    "full_response": final_text,
+                    "tokens_generated": tokens_generated,
+                    "generation_time": total_time,
+                    "tokens_per_second": tokens_generated / total_time if total_time > 0 else 0
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in streaming generation: {str(e)}")
+            yield {"type": "error", "error": str(e)}
     
     def generate_text(self, model_name: str, prompt: str, **kwargs) -> Dict[str, Any]:
         """Generate text using a language model"""

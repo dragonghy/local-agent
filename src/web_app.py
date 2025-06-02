@@ -14,7 +14,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, WebSocket, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -102,6 +102,39 @@ async def chat(request: ChatRequest) -> Dict[str, Any]:
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """Generate streaming text response from a model"""
+    async def generate():
+        try:
+            # Send initial message
+            yield f"data: {json.dumps({'type': 'start', 'model': request.model})}\n\n"
+            
+            # Generate tokens
+            async for token_data in model_manager.generate_text_stream(
+                request.model,
+                request.prompt,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens
+            ):
+                yield f"data: {json.dumps(token_data)}\n\n"
+                await asyncio.sleep(0)  # Allow other tasks to run
+            
+            # Send completion message
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        }
+    )
 
 @app.post("/api/image/analyze")
 async def analyze_image(
