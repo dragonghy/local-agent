@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local LLM Chat</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Local LLM Chat</h1>
+            <div class="header-controls">
+                <select id="modelSelect" class="model-select">
+                    <option value="">Loading models...</option>
+                </select>
+                <button id="loadModelBtn" class="btn btn-primary">Load Model</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="chat-container">
+                <div id="chatHistory" class="chat-history">
+                    <div class="message system">
+                        <p>Welcome! Select a model and start chatting. You can also upload images for vision models.</p>
+                    </div>
+                </div>
+                
+                <div class="input-container">
+                    <div class="input-row">
+                        <input type="text" 
+                               id="chatInput" 
+                               class="chat-input" 
+                               placeholder="Type your message here..."
+                               autocomplete="off">
+                        <button id="sendBtn" class="btn btn-send">Send</button>
+                    </div>
+                    
+                    <div class="input-options">
+                        <label class="file-upload">
+                            <input type="file" 
+                                   id="imageUpload" 
+                                   accept="image/*" 
+                                   style="display: none;">
+                            <span class="btn btn-secondary">📷 Upload Image</span>
+                        </label>
+                        
+                        <div class="slider-container">
+                            <label for="temperature">Temperature: <span id="tempValue">0.7</span></label>
+                            <input type="range" 
+                                   id="temperature" 
+                                   min="0" 
+                                   max="1" 
+                                   step="0.1" 
+                                   value="0.7">
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label for="maxTokens">Max Tokens: <span id="tokensValue">256</span></label>
+                            <input type="range" 
+                                   id="maxTokens" 
+                                   min="50" 
+                                   max="1000" 
+                                   step="50" 
+                                   value="256">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="info-panel">
+                <h3>Model Information</h3>
+                <div id="modelInfo" class="model-info">
+                    <p>No model selected</p>
+                </div>
+                
+                <h3>Performance Metrics</h3>
+                <div id="metrics" class="metrics">
+                    <p>Tokens/sec: <span id="tokensPerSec">-</span></p>
+                    <p>Generation time: <span id="genTime">-</span></p>
+                    <p>Tokens generated: <span id="tokensGen">-</span></p>
+                </div>
+                
+                <h3>Uploaded Image</h3>
+                <div id="imagePreview" class="image-preview">
+                    <p>No image uploaded</p>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

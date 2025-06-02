@@ -63,11 +63,19 @@ Overall Project Goal
 ### 📋 Pending
 - Llama 3.2 3B (awaiting Meta access approval)
 
+### 🌐 Web UI Status
+- ✅ **Fully functional chat interface** at http://localhost:8000
+- ✅ **Server management** via `./scripts/manage_web_ui.sh {start|stop|status}`
+- ⚠️ **Known Issues**:
+  - No streaming responses (tokens appear all at once)
+  - Some models showing unusual response patterns
+
 ### 📋 Next Steps
-- Build web UI prototype
-- Implement comprehensive benchmarking suite
-- Optimize memory usage for larger models
-- Test multi-modal capabilities
+- 🔴 **HIGH**: Implement streaming token generation
+- 🔴 **HIGH**: Fix model response quality issues  
+- 🟡 **MEDIUM**: Add model-specific prompt templates
+- 🟡 **MEDIUM**: Complete benchmarking suite
+- ⏳ **PENDING**: Llama 3.2 3B (awaiting access)
 
 ### 📁 Documentation Created
 - `knowledge_base.md` - Apple M4 environment details
@@ -76,6 +84,27 @@ Overall Project Goal
 - `.gitignore` - Excludes model files from version control
 
 See [Tasks.md](./Tasks.md) for detailed tasks breakdown and status.
+
+## 🚀 Quick Start
+
+### Native Deployment (Leverages Apple Metal GPU)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Download models
+python scripts/download_models.py <model-name>
+
+# Run web UI
+python scripts/run_web_ui.py
+# Or use the management script:
+./scripts/manage_web_ui.sh start
+
+# Access UI at http://localhost:8000
+```
+
+**Note**: This project uses native deployment to leverage Apple's Metal Performance Shaders (MPS) for GPU acceleration, achieving ~17-20 tokens/sec on M4 hardware. Docker is not recommended as it cannot access MPS, resulting in significantly slower CPU-only performance.
 
 ## 📁 Project Structure
 

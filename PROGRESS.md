@@ -171,3 +171,99 @@
 
 **Status**: Core inference infrastructure complete with 5 working models  
 **Next Session Focus**: Web UI implementation and comprehensive benchmarking suite
+
+---
+
+## 🌐 Session 3: Web UI Development & Optimization
+
+**Date**: June 1, 2025 (Evening)  
+**Focus**: Building web interface and addressing performance issues
+
+### ✅ Major Accomplishments
+
+#### 1. Full-Featured Web UI Implementation
+- **Frontend** (HTML/CSS/JS):
+  - Modern dark theme chat interface
+  - Real-time model selection with load status
+  - Temperature (0-1) and max tokens (50-1000) sliders
+  - Image upload support for vision models
+  - Performance metrics display (tokens/sec, generation time)
+  - Responsive design for mobile compatibility
+  
+- **Backend** (FastAPI):
+  - RESTful API endpoints for all operations
+  - WebSocket foundation for future streaming
+  - Automatic model loading on startup
+  - Health check endpoint for monitoring
+  - CORS support for cross-origin requests
+
+#### 2. Server Management Infrastructure
+- **Created `manage_web_ui.sh`**:
+  - `start` - Launch server in background
+  - `stop` - Graceful shutdown
+  - `restart` - Restart with new code
+  - `status` - Check if running with process info
+  - `logs` - View recent log entries
+- **Process management** with PID tracking
+- **Automatic logging** to `logs/web_ui.log`
+
+#### 3. Project Reorganization
+- **Clean directory structure**:
+  ```
+  src/          # Core application code
+  scripts/      # Management and utility scripts  
+  tests/        # Test suite with fixed paths
+  static/       # Web UI assets
+  docs/guides/  # How-to documentation
+  ```
+- **Added README** for each directory
+- **Fixed test paths** for new structure
+
+#### 4. Docker Exploration & Removal
+- Initially created Docker configuration
+- **Removed due to critical limitation**: No MPS/Metal GPU access
+- Docker runs CPU-only: ~3-5 tokens/sec vs 17-20 native
+- Decision: Focus on native deployment for Apple Silicon
+
+### 🐛 Issues Identified
+
+1. **No Streaming Response** ⚠️
+   - Currently waits for full generation before display
+   - Users want to see tokens as they're generated
+   - WebSocket foundation exists but needs implementation
+
+2. **Model Response Quality** ⚠️
+   - Some models producing unusual/repetitive output
+   - May be prompt formatting or tokenizer settings
+   - Need model-specific templates
+
+### 📋 Tasks Created for Next Session
+
+| Priority | Task | Description |
+|----------|------|-------------|
+| HIGH | Implement streaming response | Show tokens as generated |
+| HIGH | Fix LLM response behavior | Investigate quality issues |
+| HIGH | Add WebSocket streaming | Real-time token generation |
+| MEDIUM | Test model-specific issues | Identify if model or implementation |
+| MEDIUM | Add prompt templates | Model-specific formatting |
+| MEDIUM | Fix tokenizer settings | Proper padding/attention |
+| LOW | Response post-processing | Clean up output |
+
+### 🚀 Current Status
+
+- **Web UI**: ✅ Fully functional at http://localhost:8000
+- **Models**: 5 models ready (text, vision, speech)
+- **Performance**: 17-20 tokens/sec on M4 with MPS
+- **Server**: Running with auto-restart capability
+
+### 💡 Key Decisions
+
+1. **Native > Docker**: Prioritize MPS acceleration
+2. **FastAPI + Static**: Simple but effective architecture  
+3. **Background process**: Easy management with shell scripts
+4. **Unified inference**: Single API for all model types
+
+---
+
+**Status**: Web UI operational, ready for streaming implementation and response quality fixes  
+**Next Focus**: Implement streaming responses and fix model output quality issues

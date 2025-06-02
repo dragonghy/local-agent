@@ -25,4 +25,4 @@ Thumbs.db
 models/
 logs/
 *.log
-.cache/
+.cache/web_ui.pid

@@ -92,3 +92,25 @@
     - Define target latency, model size, and expected user workflow
     - List required integration points (e.g., microphone input, file upload for images)
   - [ ] Plan a roadmap for deeper testing (e.g., user studies, extended workload benchmarks).
+
+## Web UI Improvements
+- [ ] **Implement Streaming Response** 🔴 HIGH PRIORITY
+  - [ ] Implement WebSocket streaming for real-time token generation
+  - [ ] Modify inference.py to support token-by-token generation
+  - [ ] Update frontend to display tokens as they arrive
+  - [ ] Add streaming progress indicator
+- [ ] **Fix LLM Response Quality** 🔴 HIGH PRIORITY
+  - [ ] Investigate weird response patterns from models
+  - [ ] Test with different prompt formats
+  - [ ] Add model-specific prompt templates
+  - [ ] Implement proper tokenizer settings (padding, attention masks)
+  - [ ] Add response post-processing to clean output
+- [ ] **Model-Specific Optimizations**
+  - [ ] Test each model individually to identify issues
+  - [ ] Create model profiles with optimal settings
+  - [ ] Document best practices for each model
+- [ ] **UI Enhancements**
+  - [ ] Add conversation history persistence
+  - [ ] Implement chat export functionality
+  - [ ] Add model comparison mode
+  - [ ] Create settings panel for advanced options
