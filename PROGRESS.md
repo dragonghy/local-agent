@@ -306,3 +306,60 @@
 
 **Status**: Streaming implementation complete, web UI fully functional  
 **Next Focus**: Fix model response quality issues and add model-specific prompt templates
+
+---
+
+## 🧠 Session 5: Response Quality & Model Selection Fixes
+
+**Date**: June 1, 2025 (Late Night)  
+**Focus**: Implementing prompt templates and fixing model selection
+
+### ✅ Major Accomplishments
+
+#### 1. Comprehensive Prompt Template System
+- **Created `src/prompt_templates.py`**:
+  - Model-specific prompt formatting (DeepSeek R1, Default)
+  - Proper response extraction and cleaning
+  - System prompt support for behavior guidance
+  - Model-specific generation parameters
+
+- **Enhanced Generation Quality**:
+  - Added repetition penalties and ngram constraints
+  - Improved tokenization with proper padding
+  - Better temperature and top_p settings per model
+  - Reduced hallucination and repetitive output
+
+#### 2. System Prompt Integration
+- **Frontend Enhancement**:
+  - Added system prompt input field to web UI
+  - Clean dark theme styling matching existing design
+  - Optional field with helpful placeholder text
+
+- **Backend Integration**:
+  - Updated ChatRequest model to include system_prompt
+  - Enhanced both streaming and non-streaming endpoints
+  - Proper parameter passing through entire pipeline
+
+#### 3. Fixed Model Selection Bug
+- **Problem**: Web UI always sent "qwen2.5-1.5b" regardless of dropdown selection
+- **Solution**: 
+  - Fixed JavaScript model selection event handling
+  - Properly update currentModel variable on dropdown change
+  - Enhanced UI feedback showing "(Current)" model indicator
+  - Model info panel shows accurate status and selection
+
+### 🎯 Key Improvements
+- **Response Quality**: Dramatically improved coherence and relevance
+- **User Control**: System prompts allow fine-tuning model behavior
+- **Model Selection**: Users can now actually switch between loaded models
+- **UI Feedback**: Clear indication of which model is currently active
+- **Template System**: Extensible framework for adding new model types
+
+### 🧪 Quality Examples
+**Before**: "Paris. The French Republic was established on 4 August 1804 by Napoleon Bonaparte..."
+**After**: "The capital of France is Paris."
+
+---
+
+**Status**: Response quality and model selection complete, web UI fully optimized  
+**Next Focus**: Complete benchmarking suite and performance optimization

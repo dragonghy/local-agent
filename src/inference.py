@@ -20,6 +20,10 @@ from transformers import (
 )
 from PIL import Image
 import numpy as np
+try:
+    from .prompt_templates import PromptTemplateFactory, get_model_params
+except ImportError:
+    from prompt_templates import PromptTemplateFactory, get_model_params
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -177,8 +181,21 @@ class ModelManager:
             model = model_data["model"]
             tokenizer = model_data["tokenizer"]
             
+            # Get prompt template
+            template = PromptTemplateFactory.get_template(model_name)
+            
+            # Format prompt with template
+            formatted_prompt = template.format_prompt(
+                prompt, 
+                system_prompt=kwargs.get("system_prompt")
+            )
+            
+            # Set pad token if not set
+            if tokenizer.pad_token_id is None:
+                tokenizer.pad_token_id = tokenizer.eos_token_id
+
             # Tokenize input
-            inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
+            inputs = tokenizer(formatted_prompt, return_tensors="pt", padding=True).to(DEVICE)
             
             # Start timing
             start_time = time.time()
@@ -186,14 +203,14 @@ class ModelManager:
             
             # Generate with streaming
             with torch.no_grad():
-                # Get generation kwargs
-                gen_kwargs = {
+                # Get model-specific generation parameters
+                gen_kwargs = get_model_params(model_name, {
                     "max_new_tokens": kwargs.get("max_tokens", 256),
                     "temperature": kwargs.get("temperature", 0.7),
                     "do_sample": kwargs.get("do_sample", True),
                     "top_p": kwargs.get("top_p", 0.9),
-                    "pad_token_id": tokenizer.pad_token_id or tokenizer.eos_token_id,
-                }
+                })
+                gen_kwargs["pad_token_id"] = tokenizer.pad_token_id
                 
                 # Initialize generation
                 input_ids = inputs["input_ids"]
@@ -266,9 +283,15 @@ class ModelManager:
                 total_time = time.time() - start_time
                 final_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
                 
+                # Extract clean response using template
+                clean_response = template.extract_response(
+                    tokenizer.decode(input_ids[0], skip_special_tokens=True),
+                    formatted_prompt
+                )
+                
                 yield {
                     "type": "final",
-                    "full_response": final_text,
+                    "full_response": clean_response,
                     "tokens_generated": tokens_generated,
                     "generation_time": total_time,
                     "tokens_per_second": tokens_generated / total_time if total_time > 0 else 0
@@ -292,26 +315,47 @@ class ModelManager:
             model = model_data["model"]
             tokenizer = model_data["tokenizer"]
             
+            # Get prompt template
+            template = PromptTemplateFactory.get_template(model_name)
+            
+            # Format prompt with template
+            formatted_prompt = template.format_prompt(
+                prompt, 
+                system_prompt=kwargs.get("system_prompt")
+            )
+            
+            # Get model-specific generation parameters
+            gen_params = get_model_params(model_name, {
+                "max_new_tokens": kwargs.get("max_tokens", 256),
+                "temperature": kwargs.get("temperature", 0.7),
+                "do_sample": kwargs.get("do_sample", True),
+                "top_p": kwargs.get("top_p", 0.9),
+            })
+            
+            # Set pad token if not set
+            if tokenizer.pad_token_id is None:
+                tokenizer.pad_token_id = tokenizer.eos_token_id
+            
             # Tokenize input
-            inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
+            inputs = tokenizer(formatted_prompt, return_tensors="pt", padding=True).to(DEVICE)
             
             # Generate
             start_time = time.time()
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=kwargs.get("max_tokens", 256),
-                    temperature=kwargs.get("temperature", 0.7),
-                    do_sample=kwargs.get("do_sample", True),
-                    top_p=kwargs.get("top_p", 0.9),
-                    pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id
+                    pad_token_id=tokenizer.pad_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
+                    **gen_params
                 )
             
             generation_time = time.time() - start_time
             
             # Decode output
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            response_text = generated_text[len(prompt):].strip()
+            
+            # Extract response using template
+            response_text = template.extract_response(generated_text, formatted_prompt)
             
             # Calculate tokens per second
             num_tokens = len(outputs[0]) - len(inputs["input_ids"][0])

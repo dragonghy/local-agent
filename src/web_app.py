@@ -55,6 +55,7 @@ class ChatRequest(BaseModel):
     prompt: str
     temperature: float = 0.7
     max_tokens: int = 256
+    system_prompt: Optional[str] = None
 
 class ImageRequest(BaseModel):
     model: str
@@ -97,7 +98,8 @@ async def chat(request: ChatRequest) -> Dict[str, Any]:
             request.model,
             request.prompt,
             temperature=request.temperature,
-            max_tokens=request.max_tokens
+            max_tokens=request.max_tokens,
+            system_prompt=request.system_prompt
         )
         return result
     except Exception as e:
@@ -116,7 +118,8 @@ async def chat_stream(request: ChatRequest):
                 request.model,
                 request.prompt,
                 temperature=request.temperature,
-                max_tokens=request.max_tokens
+                max_tokens=request.max_tokens,
+                system_prompt=request.system_prompt
             ):
                 yield f"data: {json.dumps(token_data)}\n\n"
                 await asyncio.sleep(0)  # Allow other tasks to run

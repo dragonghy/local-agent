@@ -16,6 +16,7 @@ const tempSlider = document.getElementById('temperature');
 const tempValue = document.getElementById('tempValue');
 const tokensSlider = document.getElementById('maxTokens');
 const tokensValue = document.getElementById('tokensValue');
+const systemPrompt = document.getElementById('systemPrompt');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,7 +35,20 @@ function setupEventListeners() {
     });
     
     loadModelBtn.addEventListener('click', loadSelectedModel);
-    modelSelect.addEventListener('change', updateModelInfo);
+    modelSelect.addEventListener('change', () => {
+        const selectedModel = modelSelect.value;
+        if (selectedModel) {
+            const model = availableModels.find(m => m.name === selectedModel);
+            if (model && model.loaded) {
+                currentModel = selectedModel;
+            } else {
+                currentModel = null; // Model not loaded
+            }
+        } else {
+            currentModel = null;
+        }
+        updateModelInfo();
+    });
     
     imageUpload.addEventListener('change', handleImageUpload);
     
@@ -111,10 +125,14 @@ function updateModelInfo() {
     const model = availableModels.find(m => m.name === selectedModel);
     
     if (model) {
+        const isCurrentModel = currentModel === selectedModel;
+        const statusText = model.loaded ? 'Loaded ✓' : 'Not loaded';
+        const currentText = isCurrentModel ? ' (Current)' : '';
+        
         modelInfo.innerHTML = `
-            <p><strong>Name:</strong> ${model.name}</p>
+            <p><strong>Name:</strong> ${model.name}${currentText}</p>
             <p><strong>Type:</strong> ${model.type}</p>
-            <p><strong>Status:</strong> ${model.loaded ? 'Loaded ✓' : 'Not loaded'}</p>
+            <p><strong>Status:</strong> ${statusText}</p>
             <p><strong>Description:</strong> ${model.description}</p>
         `;
         
@@ -123,6 +141,7 @@ function updateModelInfo() {
         document.querySelector('.file-upload').style.display = isVisionModel ? 'block' : 'none';
     } else {
         modelInfo.innerHTML = '<p>No model selected</p>';
+        document.querySelector('.file-upload').style.display = 'none';
     }
 }
 
@@ -203,7 +222,8 @@ async function sendStreamingMessage(prompt) {
                 model: currentModel,
                 prompt: prompt,
                 temperature: parseFloat(tempSlider.value),
-                max_tokens: parseInt(tokensSlider.value)
+                max_tokens: parseInt(tokensSlider.value),
+                system_prompt: systemPrompt.value || undefined
             })
         });
         

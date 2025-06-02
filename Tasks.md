@@ -99,12 +99,14 @@
   - [x] Modify inference.py to support token-by-token generation
   - [x] Update frontend to display tokens as they arrive
   - [x] Add streaming progress indicator with real-time metrics
-- [ ] **Fix LLM Response Quality** 🔴 HIGH PRIORITY
-  - [ ] Investigate weird response patterns from models
-  - [ ] Test with different prompt formats
-  - [ ] Add model-specific prompt templates
-  - [ ] Implement proper tokenizer settings (padding, attention masks)
-  - [ ] Add response post-processing to clean output
+- [x] **Fix LLM Response Quality** ✅ COMPLETED
+  - [x] Investigate weird response patterns from models
+  - [x] Test with different prompt formats
+  - [x] Add model-specific prompt templates
+  - [x] Implement proper tokenizer settings (padding, attention masks)
+  - [x] Add response post-processing to clean output
+  - [x] Add system prompt support for better control
+  - [x] Fix model selection bug in web UI
 - [ ] **Model-Specific Optimizations**
   - [ ] Test each model individually to identify issues
   - [ ] Create model profiles with optimal settings
