@@ -28,3 +28,7 @@ logs/
 .cache/
 web_ui.pid
 temp_uploads/
+ssl/
+
+# Server logs
+server.log
