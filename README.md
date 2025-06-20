@@ -104,22 +104,27 @@ See [Tasks.md](./Tasks.md) for detailed tasks breakdown and status.
 - macOS with Apple Silicon (M1/M2/M3/M4) for GPU acceleration
 - 16GB+ RAM recommended
 - 50GB+ free disk space for models
+- Homebrew (for system dependencies)
 
 ### Installation
 
 ```bash
-# 1. Clone the repository
+# 1. Install system dependencies
+brew install ffmpeg       # Required for audio processing
+brew install portaudio    # Required for audio recording (optional)
+
+# 2. Clone the repository
 git clone https://github.com/yourusername/local-agent.git
 cd local-agent
 
-# 2. Create virtual environment (recommended)
+# 3. Create virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate  # On macOS/Linux
 
-# 3. Install dependencies
+# 4. Install dependencies
 pip install -r requirements.txt
 
-# 4. Download models (choose based on your needs)
+# 5. Download models (choose based on your needs)
 # Text generation models
 python scripts/download_models.py qwen2.5-1.5b          # Recommended starter model
 python scripts/download_models.py deepseek-r1-distill-qwen-1.5b
@@ -131,19 +136,19 @@ python scripts/download_whisper_models.py whisper-large-v3  # Best accuracy
 # Vision-language models (optional)
 python scripts/download_models.py blip-base              # Image captioning
 
-# 5. Configure API keys (optional, for external services)
+# 6. Configure API keys (optional, for external services)
 cp .env.example .env
 # Edit .env with your OpenAI/Gemini API keys
 
-# 6. Generate SSL certificates (required for HTTPS/microphone access)
+# 7. Generate SSL certificates (required for HTTPS/microphone access)
 mkdir -p ssl
 openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
   -subj "/C=US/ST=Local/L=Local/O=LocalLLM/CN=localhost"
 
-# 7. Run the web server
+# 8. Run the web server
 python src/web_app.py --https --port 8000
 
-# 8. Access the UI
+# 9. Access the UI
 # Chat interface: https://localhost:8000
 # Transcription: https://localhost:8000/transcription
 ```
@@ -202,6 +207,10 @@ python src/web_app.py --https --port 8000
   openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
     -subj "/C=US/ST=Local/L=Local/O=LocalLLM/CN=localhost"
   ```
+
+**"ffmpeg not found" or audio conversion errors**
+- Install ffmpeg: `brew install ffmpeg`
+- Verify installation: `ffmpeg -version`
 
 **Model download fails**
 - Check internet connection
