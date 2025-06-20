@@ -413,7 +413,10 @@ def main():
             }
             print(f"Using HTTPS with SSL certificates")
         else:
-            print("SSL certificates not found. Run without --https first to generate them.")
+            print("\nSSL certificates not found. Please generate them first:")
+            print("mkdir -p ssl")
+            print('openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \\')
+            print('  -subj "/C=US/ST=Local/L=Local/O=LocalLLM/CN=localhost"')
             return
     
     # Run the server

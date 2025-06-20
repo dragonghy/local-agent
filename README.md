@@ -135,10 +135,15 @@ python scripts/download_models.py blip-base              # Image captioning
 cp .env.example .env
 # Edit .env with your OpenAI/Gemini API keys
 
-# 6. Run the web server
+# 6. Generate SSL certificates (required for HTTPS/microphone access)
+mkdir -p ssl
+openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
+  -subj "/C=US/ST=Local/L=Local/O=LocalLLM/CN=localhost"
+
+# 7. Run the web server
 python src/web_app.py --https --port 8000
 
-# 7. Access the UI
+# 8. Access the UI
 # Chat interface: https://localhost:8000
 # Transcription: https://localhost:8000/transcription
 ```
@@ -189,6 +194,14 @@ python src/web_app.py --https --port 8000
 **"Connection not private" warning in browser**
 - This is normal due to self-signed HTTPS certificate
 - Click "Advanced" → "Proceed to localhost"
+
+**"SSL certificates not found" error**
+- Run the SSL generation command from step 6:
+  ```bash
+  mkdir -p ssl
+  openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
+    -subj "/C=US/ST=Local/L=Local/O=LocalLLM/CN=localhost"
+  ```
 
 **Model download fails**
 - Check internet connection
