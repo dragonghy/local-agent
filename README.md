@@ -1,8 +1,14 @@
-# Local LLM Deployment Prototype
+# Local LLM Agent - Run AI Models Locally on Apple Silicon
 
-Overall Project Goal
+A high-performance local AI system designed for Apple Silicon Macs (M1/M2/M3/M4). Features include text generation, speech transcription, and image understanding - all running privately on your device.
 
-**Deliver a working proof‐of‐concept that demonstrates how DeepSeek, LLaMA 3, and Gemma 3 perform when deployed on local GPU/CPU resources, with a simple chat UI for manual testing. Use empirical benchmarks to decide which model(s) are practical for future local/offline products.**
+**Key Features:**
+- 🚀 Optimized for Apple Metal GPU acceleration (17-20 tokens/sec)
+- 💬 Chat interface with real-time streaming responses
+- 🎤 Professional transcription with multiple Whisper models
+- 🖼️ Vision capabilities for image analysis
+- 🔒 100% private - all processing happens locally
+- 🌐 Optional cloud API integration (OpenAI, Gemini)
 
 ## 1. Project Context
 - **Motivation**: Explore feasibility of running modern large language models (LLMs) locally or via remote GPU, and assess performance for potential on-device or self-hosted applications.
@@ -93,22 +99,63 @@ See [Tasks.md](./Tasks.md) for detailed tasks breakdown and status.
 
 ## 🚀 Quick Start
 
-### Native Deployment (Leverages Apple Metal GPU)
+### Prerequisites
+- Python 3.8+ 
+- macOS with Apple Silicon (M1/M2/M3/M4) for GPU acceleration
+- 16GB+ RAM recommended
+- 50GB+ free disk space for models
+
+### Installation
 
 ```bash
-# Install dependencies
+# 1. Clone the repository
+git clone https://github.com/yourusername/local-agent.git
+cd local-agent
+
+# 2. Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On macOS/Linux
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# Download models
-python scripts/download_models.py <model-name>
+# 4. Download models (choose based on your needs)
+# Text generation models
+python scripts/download_models.py qwen2.5-1.5b          # Recommended starter model
+python scripts/download_models.py deepseek-r1-distill-qwen-1.5b
 
-# Run web UI
+# Speech transcription models  
+python scripts/download_whisper_models.py whisper-base   # Fast transcription
+python scripts/download_whisper_models.py whisper-large-v3  # Best accuracy
+
+# Vision-language models (optional)
+python scripts/download_models.py blip-base              # Image captioning
+
+# 5. Configure API keys (optional, for external services)
+cp .env.example .env
+# Edit .env with your OpenAI/Gemini API keys
+
+# 6. Run the web server
 python src/web_app.py --https --port 8000
 
-# Access UI at https://localhost:8000
+# 7. Access the UI
 # Chat interface: https://localhost:8000
 # Transcription: https://localhost:8000/transcription
 ```
+
+### First Run Notes
+- **HTTPS Warning**: Browser will show security warning due to self-signed certificate - this is normal, click "Advanced" → "Proceed"
+- **Model Loading**: First model load takes 5-10 seconds, subsequent loads are faster
+- **Memory Usage**: Each model uses 3-15GB RAM depending on size
+
+### Available Models
+| Model | Size | Purpose | Download Command |
+|-------|------|---------|------------------|
+| qwen2.5-1.5b | 3.3GB | Fast text generation | `python scripts/download_models.py qwen2.5-1.5b` |
+| deepseek-r1-distill-qwen-1.5b | 3.1GB | Quality text generation | `python scripts/download_models.py deepseek-r1-distill-qwen-1.5b` |
+| whisper-base | 145MB | Fast transcription | `python scripts/download_whisper_models.py whisper-base` |
+| whisper-large-v3 | 5.8GB | Best transcription | `python scripts/download_whisper_models.py whisper-large-v3` |
+| blip-base | 446MB | Image captioning | `python scripts/download_models.py blip-base` |
 
 **Note**: This project uses native deployment to leverage Apple's Metal Performance Shaders (MPS) for GPU acceleration, achieving ~17-20 tokens/sec on M4 hardware. Docker is not recommended as it cannot access MPS, resulting in significantly slower CPU-only performance.
 
@@ -132,4 +179,43 @@ python src/web_app.py --https --port 8000
 │   └── initial_results_summary.md
 ├── models/               # Downloaded models (gitignored)
 ├── logs/                 # Runtime logs (gitignored)
-└── static/               # Web UI assets (future)
+└── static/               # Web UI assets
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**"Connection not private" warning in browser**
+- This is normal due to self-signed HTTPS certificate
+- Click "Advanced" → "Proceed to localhost"
+
+**Model download fails**
+- Check internet connection
+- Ensure sufficient disk space (models are 0.1-35GB)
+- Try downloading one model at a time
+
+**Out of memory errors**
+- Close other applications
+- Try smaller models (whisper-base instead of whisper-large)
+- Restart the server between model switches
+
+**Microphone not working**
+- Ensure HTTPS is enabled (`--https` flag)
+- Allow microphone permissions in browser
+- Check System Preferences → Security & Privacy → Microphone
+
+**Slow performance**
+- Verify MPS is detected: Check logs for "Using device: mps"
+- First inference is always slower (model loading)
+- Consider using smaller models for testing
+
+### Getting Help
+
+- 📖 See [docs/transcription_guide.md](docs/transcription_guide.md) for detailed transcription setup
+- 🐛 Report issues: [GitHub Issues](https://github.com/yourusername/local-agent/issues)
+- 💡 Check [docs/model_selection_guide.md](docs/model_selection_guide.md) for model recommendations
+
+## 📄 License
+
+This project is open source and available under the MIT License.
