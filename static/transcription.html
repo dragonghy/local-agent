@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/transcription.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎤 Audio Transcription</h1>
+            <div class="header-controls">
+                <a href="/" class="btn btn-secondary">← Back to Chat</a>
+            </div>
+        </header>
+
+        <main class="transcription-main">
+            <!-- Recording Section -->
+            <div class="recording-section">
+                <div id="httpsNotice" class="https-notice" style="display: none;">
+                    <p><strong>⚠️ HTTPS Required:</strong> Microphone access requires a secure connection. Please:</p>
+                    <ul>
+                        <li>Run the server with <code>--https</code> flag, or</li>
+                        <li>Access via <code>https://</code> instead of <code>http://</code></li>
+                    </ul>
+                </div>
+                <div class="recording-controls">
+                    <button id="recordBtn" class="btn btn-record">🎤 Start Recording</button>
+                    <button id="cancelBtn" class="btn btn-secondary" style="display: none;">✖️ Cancel</button>
+                    <button id="confirmBtn" class="btn btn-primary" style="display: none;">✅ Confirm & Transcribe</button>
+                    <div id="recordingStatus" class="recording-status"></div>
+                    <div id="recordingTime" class="recording-time">00:00</div>
+                </div>
+                
+                <div id="audioPreview" class="audio-preview">
+                    <p>No audio recorded</p>
+                </div>
+            </div>
+
+            <!-- Model Selection Section -->
+            <div class="model-selection">
+                <h3 class="collapsible-header" onclick="toggleModelSelection()">
+                    <span class="toggle-icon">▼</span> Transcription Models
+                </h3>
+                <div class="model-options collapsible-content" id="modelOptions">
+                    <div class="model-group">
+                        <h4>Local Models</h4>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="whisper-base" checked>
+                            <span class="model-name">Whisper Base (Local)</span>
+                            <span class="model-desc">OpenAI Whisper Base model running locally</span>
+                        </label>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="whisper-small">
+                            <span class="model-name">Whisper Small (Local)</span>
+                            <span class="model-desc">More accurate but slower local model</span>
+                        </label>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="whisper-medium">
+                            <span class="model-name">Whisper Medium (Local)</span>
+                            <span class="model-desc">High accuracy local model</span>
+                        </label>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="whisper-large-v2">
+                            <span class="model-name">Whisper Large-v2 (Local)</span>
+                            <span class="model-desc">Best accuracy, handles fast speech</span>
+                        </label>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="whisper-large-v3">
+                            <span class="model-name">Whisper Large-v3 (Local)</span>
+                            <span class="model-desc">Latest model, excellent for all speech</span>
+                        </label>
+                    </div>
+                    
+                    <div class="model-group">
+                        <h4>Remote APIs</h4>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="openai-whisper">
+                            <span class="model-name">OpenAI Whisper API</span>
+                            <span class="model-desc">Cloud-based OpenAI Whisper service</span>
+                        </label>
+                        <label class="model-option">
+                            <input type="checkbox" name="transcription-model" value="gemini-speech">
+                            <span class="model-name">Gemini Speech API</span>
+                            <span class="model-desc">Google Gemini speech recognition</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section" style="display: none;">
+                <h3>Transcription Results</h3>
+                <div id="transcriptionResults" class="transcription-results"></div>
+            </div>
+        </main>
+
+        <!-- History Sidebar -->
+        <aside class="history-sidebar">
+            <h3>📚 History</h3>
+            <div class="history-controls">
+                <button id="clearHistoryBtn" class="btn btn-danger btn-small">Clear All</button>
+                <input type="text" id="historySearch" placeholder="Search history..." class="search-input">
+            </div>
+            <div id="historyList" class="history-list">
+                <p class="no-history">No transcription history yet</p>
+            </div>
+        </aside>
+    </div>
+
+    <script src="/static/transcription.js"></script>
+</body>
+</html>

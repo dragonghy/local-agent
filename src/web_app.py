@@ -6,13 +6,21 @@ Provides a simple chat interface for interacting with deployed models
 
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import json
 import asyncio
 from datetime import datetime
 
-from fastapi import FastAPI, WebSocket, HTTPException, UploadFile, File
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, will fall back to system env vars
+
+from fastapi import FastAPI, WebSocket, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -68,6 +76,13 @@ class ModelInfo(BaseModel):
     loaded: bool
     description: str
 
+class TranscriptionRequest(BaseModel):
+    model: str
+    
+# API Configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 # Store uploaded files temporarily
 UPLOAD_DIR = Path("temp_uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -76,6 +91,11 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 async def root():
     """Serve the main chat interface"""
     return HTMLResponse(content=open("static/index.html").read())
+
+@app.get("/transcription")
+async def transcription_page():
+    """Serve the transcription interface"""
+    return HTMLResponse(content=open("static/transcription.html").read())
 
 @app.get("/api/models")
 async def list_models() -> List[ModelInfo]:
@@ -167,6 +187,148 @@ async def analyze_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/audio/transcribe")
+async def transcribe_audio(file: UploadFile = File(...), model: str = Form("whisper-base")) -> Dict[str, Any]:
+    """Transcribe uploaded audio using Whisper model"""
+    try:
+        logger.info(f"Received transcription request with model: {model}")
+        # Validate file type (accept both audio and video mime types for webm)
+        valid_types = ['audio/', 'video/webm', 'audio/webm']
+        if not file.content_type or not any(file.content_type.startswith(t) for t in valid_types):
+            raise HTTPException(status_code=400, detail=f"File must be an audio file. Got: {file.content_type}")
+        
+        # Save uploaded file with proper extension
+        timestamp = datetime.now().timestamp()
+        if file.content_type and 'webm' in file.content_type:
+            file_path = UPLOAD_DIR / f"{timestamp}_recording.webm"
+        else:
+            file_path = UPLOAD_DIR / f"{timestamp}_{file.filename}"
+            
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        logger.info(f"Saved audio file: {file_path} ({file.content_type}, {len(content)} bytes)")
+        
+        # Transcribe audio using specified Whisper model
+        result = model_manager.transcribe_audio(
+            model,  # Use the specified model
+            str(file_path)
+        )
+        
+        # Clean up
+        try:
+            file_path.unlink()
+        except:
+            pass  # Don't fail if cleanup fails
+        
+        return result
+    except Exception as e:
+        logger.error(f"Transcription error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/transcribe/openai")
+async def transcribe_openai(file: UploadFile = File(...)) -> Dict[str, Any]:
+    """Transcribe audio using OpenAI Whisper API"""
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=501, detail="OpenAI API key not configured")
+    
+    try:
+        import openai
+        from openai import OpenAI
+        
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        # Save uploaded file
+        timestamp = datetime.now().timestamp()
+        file_path = UPLOAD_DIR / f"{timestamp}_{file.filename}"
+        
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        logger.info(f"Transcribing with OpenAI Whisper API: {file_path}")
+        start_time = time.time()
+        
+        # Transcribe with OpenAI
+        with open(file_path, "rb") as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                response_format="text"
+            )
+        
+        transcription_time = time.time() - start_time
+        
+        # Clean up
+        try:
+            file_path.unlink()
+        except:
+            pass
+        
+        return {
+            "transcription": transcript.strip(),
+            "duration": transcription_time,
+            "model": "openai-whisper"
+        }
+        
+    except ImportError:
+        raise HTTPException(status_code=501, detail="OpenAI library not installed. Install with: pip install openai")
+    except Exception as e:
+        logger.error(f"OpenAI transcription error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/transcribe/gemini")
+async def transcribe_gemini(file: UploadFile = File(...)) -> Dict[str, Any]:
+    """Transcribe audio using Google Gemini API"""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=501, detail="Gemini API key not configured")
+    
+    try:
+        import google.generativeai as genai
+        import base64
+        
+        # Configure Gemini
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        
+        # Read audio file
+        content = await file.read()
+        
+        logger.info(f"Transcribing with Gemini API")
+        start_time = time.time()
+        
+        # Convert audio to base64 for Gemini
+        audio_data = base64.b64encode(content).decode()
+        
+        # Create prompt for transcription
+        prompt = "Please transcribe the audio content in this file. Provide only the transcribed text without any additional commentary."
+        
+        # Send to Gemini (Note: Audio transcription support may vary)
+        response = model.generate_content([
+            prompt,
+            {
+                "mime_type": file.content_type or "audio/webm",
+                "data": audio_data
+            }
+        ])
+        
+        transcription_time = time.time() - start_time
+        
+        transcription = response.text.strip() if response.text else "No speech detected"
+        
+        return {
+            "transcription": transcription,
+            "duration": transcription_time,
+            "model": "gemini-speech"
+        }
+        
+    except ImportError:
+        raise HTTPException(status_code=501, detail="Google Generative AI library not installed. Install with: pip install google-generativeai")
+    except Exception as e:
+        logger.error(f"Gemini transcription error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
     """WebSocket endpoint for streaming responses"""
@@ -219,6 +381,13 @@ if static_dir.exists():
 
 def main():
     """Run the web application"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Local LLM Web Interface")
+    parser.add_argument("--https", action="store_true", help="Run with HTTPS")
+    parser.add_argument("--port", type=int, default=8000, help="Port to run on")
+    args = parser.parse_args()
+    
     # Pre-load a default model
     print("Starting Local LLM Web Interface...")
     
@@ -231,12 +400,32 @@ def main():
                 print(f"Successfully loaded {model}")
                 break
     
+    # Configure SSL if requested
+    ssl_config = None
+    if args.https:
+        ssl_keyfile = Path(__file__).parent.parent / "ssl" / "key.pem"
+        ssl_certfile = Path(__file__).parent.parent / "ssl" / "cert.pem"
+        
+        if ssl_keyfile.exists() and ssl_certfile.exists():
+            ssl_config = {
+                "ssl_keyfile": str(ssl_keyfile),
+                "ssl_certfile": str(ssl_certfile)
+            }
+            print(f"Using HTTPS with SSL certificates")
+        else:
+            print("SSL certificates not found. Run without --https first to generate them.")
+            return
+    
     # Run the server
+    protocol = "https" if ssl_config else "http"
+    print(f"Server will be available at {protocol}://localhost:{args.port}")
+    
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
-        log_level="info"
+        port=args.port,
+        log_level="info",
+        **ssl_config if ssl_config else {}
     )
 
 if __name__ == "__main__":

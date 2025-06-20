@@ -15,6 +15,7 @@
                     <option value="">Loading models...</option>
                 </select>
                 <button id="loadModelBtn" class="btn btn-primary">Load Model</button>
+                <a href="/transcription" class="btn btn-secondary">🎤 Transcription</a>
             </div>
         </header>
 
@@ -53,6 +54,12 @@
                                    style="display: none;">
                             <span class="btn btn-secondary">📷 Upload Image</span>
                         </label>
+                        
+                        <div class="audio-controls">
+                            <button id="recordBtn" class="btn btn-secondary">🎤 Record Audio</button>
+                            <button id="stopRecordBtn" class="btn btn-danger" style="display: none;">⏹️ Stop Recording</button>
+                            <span id="recordingStatus" class="recording-status"></span>
+                        </div>
                         
                         <div class="slider-container">
                             <label for="temperature">Temperature: <span id="tempValue">0.7</span></label>
@@ -93,6 +100,11 @@
                 <h3>Uploaded Image</h3>
                 <div id="imagePreview" class="image-preview">
                     <p>No image uploaded</p>
+                </div>
+                
+                <h3>Audio Recording</h3>
+                <div id="audioPreview" class="audio-preview">
+                    <p>No audio recorded</p>
                 </div>
             </aside>
         </main>

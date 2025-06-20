@@ -57,18 +57,25 @@ Overall Project Goal
   - BLIP base (446MB) - Image captioning
   - BLIP-2 2.7B (15GB) - Advanced VQA
   - DeepSeek-VL2-Small (35GB) - Multi-modal understanding
-- **Speech Model:**
-  - Whisper base (145MB) - Speech transcription
+- **Speech Models:**
+  - Whisper base (145MB) - Fast speech transcription
+  - Whisper medium (2.9GB) - Improved accuracy
+  - Whisper large-v3 (5.8GB) - Highest accuracy multilingual
 
 ### 📋 Pending
 - Llama 3.2 3B (awaiting Meta access approval)
 
 ### 🌐 Web UI Status
-- ✅ **Fully functional chat interface** at http://localhost:8000
+- ✅ **Fully functional chat interface** at https://localhost:8000
 - ✅ **Real-time streaming responses** with SSE (tokens appear as generated)
 - ✅ **High-quality responses** with prompt templates and system prompts
 - ✅ **Proper model selection** - users can switch between loaded models
 - ✅ **Server management** via `./scripts/manage_web_ui.sh {start|stop|status}`
+- ✅ **Professional transcription interface** at https://localhost:8000/transcription
+- ✅ **Multi-model transcription** - Compare local Whisper models vs OpenAI/Gemini APIs
+- ✅ **Long audio support** - Handles recordings up to 10 minutes with automatic chunking
+- ✅ **Language auto-detection** - Native language output (Chinese, English, etc.)
+- ✅ **Transcription history** - Searchable sidebar with previous results
 
 ### 📋 Next Steps
 - 🟡 **MEDIUM**: Complete benchmarking suite
@@ -96,11 +103,11 @@ pip install -r requirements.txt
 python scripts/download_models.py <model-name>
 
 # Run web UI
-python scripts/run_web_ui.py
-# Or use the management script:
-./scripts/manage_web_ui.sh start
+python src/web_app.py --https --port 8000
 
-# Access UI at http://localhost:8000
+# Access UI at https://localhost:8000
+# Chat interface: https://localhost:8000
+# Transcription: https://localhost:8000/transcription
 ```
 
 **Note**: This project uses native deployment to leverage Apple's Metal Performance Shaders (MPS) for GPU acceleration, achieving ~17-20 tokens/sec on M4 hardware. Docker is not recommended as it cannot access MPS, resulting in significantly slower CPU-only performance.

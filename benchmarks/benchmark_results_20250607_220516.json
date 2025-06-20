@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-06-07T22:05:16.489585",
+  "total_duration": 1.0166568756103516,
+  "models_tested": [
+    "llama-3.2-3b"
+  ],
+  "results": [],
+  "system_metrics": []
+}

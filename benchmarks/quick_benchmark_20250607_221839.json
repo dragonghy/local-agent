@@ -1,0 +1,44 @@
+{
+  "llama-3.2-3b": {
+    "reasoning": {
+      "prompt": "What is 15 * 8?",
+      "response": "(15 * 8)\n## Step 1: First, we need to recall the rules of multiplication.\nTo multiply two numbers, we multiply the numbers together.\n\n## Step 2: Now, we multiply 15 by 8.\n15 * 8 = 120\n\nThe final answe...",
+      "time": 15.115402221679688,
+      "tokens_per_second": 10.871672740865122,
+      "tokens_generated": 67
+    },
+    "knowledge": {
+      "prompt": "Who wrote Romeo and Juliet?",
+      "response": "William Shakespeare\nA) William Shakespeare\nB) William Shakespeare and Christopher Marlowe\nC) William Shakespeare and Christopher Marlowe\nD) Unknown\nThe best answer is A.",
+      "time": 2.9132511615753174,
+      "tokens_per_second": 13.391808114274767,
+      "tokens_generated": 39
+    },
+    "creativity": {
+      "prompt": "Write a haiku about computers",
+      "response": "and the internet\nCircuits hum beneath\nConnections weave a vast web\nKnowledge at our fingertips",
+      "time": 1.5252790451049805,
+      "tokens_per_second": 13.776618608770919,
+      "tokens_generated": 21
+    },
+    "optimization": {
+      "best_temperature": 0.5,
+      "best_top_p": 0.8,
+      "quality_score": 0.6,
+      "speed_score": 0.6813055193702529
+    }
+  },
+  "blip2-base": {
+    "response": "What color is this image?\n",
+    "time": 40.23633313179016,
+    "type": "vision"
+  },
+  "blip-base": {
+    "response": "what color is this image?",
+    "time": 3.774117946624756,
+    "type": "vision"
+  },
+  "weight_optimization": {
+    "skipped": "Missing dependencies"
+  }
+}

@@ -2,6 +2,9 @@
 let currentModel = null;
 let uploadedImage = null;
 let availableModels = [];
+let mediaRecorder = null;
+let audioChunks = [];
+let recordedAudio = null;
 
 // DOM elements
 const modelSelect = document.getElementById('modelSelect');
@@ -17,6 +20,10 @@ const tempValue = document.getElementById('tempValue');
 const tokensSlider = document.getElementById('maxTokens');
 const tokensValue = document.getElementById('tokensValue');
 const systemPrompt = document.getElementById('systemPrompt');
+const recordBtn = document.getElementById('recordBtn');
+const stopRecordBtn = document.getElementById('stopRecordBtn');
+const recordingStatus = document.getElementById('recordingStatus');
+const audioPreview = document.getElementById('audioPreview');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,6 +66,9 @@ function setupEventListeners() {
     tokensSlider.addEventListener('input', (e) => {
         tokensValue.textContent = e.target.value;
     });
+    
+    recordBtn.addEventListener('click', startRecording);
+    stopRecordBtn.addEventListener('click', stopRecording);
 }
 
 // Load available models
@@ -379,4 +389,215 @@ function connectWebSocket() {
     };
     
     return ws;
+}
+
+// Audio recording functions
+async function startRecording() {
+    try {
+        // Check if mediaDevices is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('MediaDevices API not supported in this browser');
+        }
+        
+        // Check permissions first
+        const permissions = await navigator.permissions.query({ name: 'microphone' });
+        console.log('Microphone permission status:', permissions.state);
+        
+        if (permissions.state === 'denied') {
+            throw new Error('Microphone permission denied. Please enable in browser settings.');
+        }
+        
+        addMessage('system', 'Requesting microphone access...');
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        });
+        
+        // Check if we got a valid stream
+        if (!stream || stream.getAudioTracks().length === 0) {
+            throw new Error('No audio tracks available');
+        }
+        
+        console.log('Audio stream obtained:', stream.getAudioTracks());
+        
+        // Try to use WAV format if available
+        let mimeType = 'audio/webm;codecs=opus'; // Default
+        
+        // Check supported MIME types
+        const possibleTypes = [
+            'audio/wav',
+            'audio/wave',
+            'audio/mpeg',
+            'audio/mp4',
+            'audio/webm;codecs=opus',
+            'audio/webm'
+        ];
+        
+        for (const type of possibleTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                console.log(`Using MIME type: ${type}`);
+                mimeType = type;
+                break;
+            }
+        }
+        
+        mediaRecorder = new MediaRecorder(stream, {
+            mimeType: mimeType
+        });
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            recordedAudio = audioBlob;
+            console.log('Recorded audio blob type:', audioBlob.type);
+            
+            // Show audio player in preview
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioPreview.innerHTML = `
+                <p>Audio recorded (${(audioBlob.size / 1024).toFixed(1)} KB)</p>
+                <audio controls>
+                    <source src="${audioUrl}" type="audio/webm">
+                    Your browser does not support the audio element.
+                </audio>
+                <br>
+                <button id="transcribeBtn" class="btn btn-primary" style="margin-top: 10px;">📝 Transcribe to Text</button>
+            `;
+            
+            // Add transcribe button event listener
+            document.getElementById('transcribeBtn').addEventListener('click', transcribeAudio);
+            
+            // Stop all tracks to release microphone
+            stream.getTracks().forEach(track => track.stop());
+        };
+        
+        mediaRecorder.start();
+        
+        // Update UI
+        recordBtn.style.display = 'none';
+        stopRecordBtn.style.display = 'inline-block';
+        recordingStatus.textContent = '🔴 Recording...';
+        recordingStatus.className = 'recording-status recording';
+        
+        addMessage('system', 'Recording started. Click "Stop Recording" when finished.');
+        
+    } catch (error) {
+        console.error('Detailed error accessing microphone:', error);
+        
+        let errorMessage = 'Error: Could not access microphone. ';
+        
+        if (error.name === 'NotAllowedError') {
+            errorMessage += 'Permission denied. Please click the microphone icon in the address bar and allow access.';
+        } else if (error.name === 'NotFoundError') {
+            errorMessage += 'No microphone found. Please check your hardware.';
+        } else if (error.name === 'NotSupportedError') {
+            errorMessage += 'Browser does not support audio recording.';
+        } else if (error.name === 'NotReadableError') {
+            errorMessage += 'Microphone is in use by another application.';
+        } else {
+            errorMessage += error.message;
+        }
+        
+        addMessage('system', errorMessage);
+        
+        // Show debug info
+        addMessage('system', `Debug info: ${error.name} - ${error.message}`);
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        
+        // Update UI
+        recordBtn.style.display = 'inline-block';
+        stopRecordBtn.style.display = 'none';
+        recordingStatus.textContent = '✅ Recording completed';
+        recordingStatus.className = 'recording-status completed';
+        
+        addMessage('system', 'Recording stopped. You can now transcribe the audio or start a new recording.');
+    }
+}
+
+async function transcribeAudio() {
+    if (!recordedAudio) {
+        addMessage('system', 'No audio recording found.');
+        return;
+    }
+    
+    const transcribeBtn = document.getElementById('transcribeBtn');
+    transcribeBtn.disabled = true;
+    transcribeBtn.textContent = '⏳ Transcribing...';
+    
+    try {
+        console.log('Starting transcription...');
+        console.log('Audio blob size:', recordedAudio.size, 'bytes');
+        console.log('Audio blob type:', recordedAudio.type);
+        
+        const formData = new FormData();
+        formData.append('file', recordedAudio, 'recording.webm');
+        
+        addMessage('system', `Sending ${(recordedAudio.size / 1024).toFixed(1)} KB audio for transcription...`);
+        
+        const response = await fetch('/api/audio/transcribe', {
+            method: 'POST',
+            body: formData
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Transcription result:', result);
+            
+            if (result.error) {
+                addMessage('system', `Transcription error: ${result.error}`);
+                return;
+            }
+            
+            const transcription = result.transcription || 'No transcription available';
+            
+            // Insert transcription into chat input
+            chatInput.value = transcription;
+            
+            addMessage('system', `Audio transcribed: "${transcription}"`);
+            
+            // Update audio preview to show transcription
+            audioPreview.innerHTML += `
+                <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                    <strong>Transcription:</strong><br>
+                    "${transcription}"
+                </div>
+            `;
+            
+            if (result.transcription_time) {
+                addMessage('system', `Transcription took ${result.transcription_time.toFixed(2)} seconds`);
+            }
+        } else {
+            const errorText = await response.text();
+            console.error('Server error response:', errorText);
+            
+            try {
+                const error = JSON.parse(errorText);
+                addMessage('system', `Transcription failed: ${error.detail || 'Unknown error'}`);
+            } catch {
+                addMessage('system', `Transcription failed: ${errorText}`);
+            }
+        }
+    } catch (error) {
+        console.error('Transcription error:', error);
+        addMessage('system', `Failed to transcribe audio: ${error.message}`);
+    } finally {
+        transcribeBtn.disabled = false;
+        transcribeBtn.textContent = '📝 Transcribe to Text';
+    }
 }

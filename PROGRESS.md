@@ -363,3 +363,159 @@
 
 **Status**: Response quality and model selection complete, web UI fully optimized  
 **Next Focus**: Complete benchmarking suite and performance optimization
+
+---
+
+## 🎤 Session 6: Audio Input Implementation
+
+**Date**: June 7, 2025
+**Focus**: Adding voice-to-text capabilities with Whisper
+
+### ✅ Major Accomplishments
+
+#### 1. Frontend Audio Recording Infrastructure
+- **UI Components**:
+  - Added "🎤 Record Audio" button with visual feedback
+  - "⏹️ Stop Recording" button that appears during recording
+  - Recording status indicator with pulsing animation
+  - Audio preview section with playback controls
+  - "📝 Transcribe to Text" button for conversion
+
+- **JavaScript Implementation**:
+  - MediaRecorder API integration for browser audio capture
+  - WebM/Opus format for better browser compatibility
+  - Audio blob creation and preview functionality
+  - Auto-fill chat input with transcribed text
+
+#### 2. Backend Audio Processing
+- **API Endpoint**: `/api/audio/transcribe`
+  - Accepts audio uploads (WebM, WAV, etc.)
+  - File validation and temporary storage
+  - Integration with Whisper model
+  - Automatic cleanup after processing
+
+- **Whisper Integration**:
+  - Added `transcribe_audio()` method to ModelManager
+  - librosa for audio preprocessing (16kHz conversion)
+  - Proper error handling and logging
+
+#### 3. HTTPS Setup for Microphone Access
+- **SSL Implementation**:
+  - Generated self-signed certificates
+  - Added `--https` flag to web_app.py
+  - Server runs on https://localhost:8443
+  - Required for browser microphone permissions
+
+### 🚧 Current Issue: Microphone Permission
+
+**Problem**: Browser reports "Could not access microphone" despite:
+- ✅ HTTPS enabled
+- ✅ Permissions manually granted in browser settings
+- ✅ SSL certificates valid
+
+**Debugging Steps Taken**:
+- Enhanced error handling with detailed error types
+- Added permission status checking
+- Switched to WebM format for better compatibility
+- Added comprehensive console logging
+
+**Next Steps**:
+- Test in different browsers (Chrome, Safari, Firefox)
+- Check system-level microphone permissions
+- Test with simplified getUserMedia call
+- Consider alternative audio capture methods
+
+### 📋 Dependencies Added
+- **librosa 0.10.2**: Audio processing and format conversion
+- Additional dependencies: scipy, scikit-learn, numba, soundfile
+
+---
+
+## 🎉 Session 7: Audio Input Complete Implementation
+
+**Date**: June 19, 2025  
+**Focus**: Fixing audio transcription issues and enabling multilingual support
+
+### ✅ Major Accomplishments
+
+#### 1. Resolved Audio Transcription Pipeline
+- **FFmpeg Dependencies Fixed**:
+  - Installed missing speex library: `brew install speex && brew link speex`
+  - Resolved dyld library loading errors
+  - WebM to WAV conversion now works reliably
+
+- **Whisper Model Data Type Issues Fixed**:
+  - Fixed FP16/FP32 mismatch: `Input type (float) and bias type (c10::Half) should be the same`
+  - Added proper dtype conversion: `input_features.half()` when model uses FP16
+  - Maintained MPS acceleration performance
+
+#### 2. Multilingual Transcription Support
+- **Removed English-only Constraint**:
+  - Initially added `language="en"` to fix dtype issues
+  - Removed constraint to enable automatic language detection
+  - Whisper now detects and transcribes in original spoken language
+
+- **Tested Languages**:
+  - ✅ English: Perfect transcription accuracy
+  - ✅ Chinese (Mandarin): Working with good accuracy
+  - ✅ Mixed language: Handles code-switching scenarios
+
+#### 3. Complete Audio Workflow Achievement
+- **End-to-End Functionality**:
+  - 🎤 Browser microphone access (HTTPS required)
+  - 🔄 Real-time WebM recording with MediaRecorder API
+  - 🔧 Automatic WebM to WAV conversion via ffmpeg
+  - 🧠 Whisper-base model transcription with MPS acceleration
+  - 📝 Auto-fill transcribed text into chat input
+  - 🌐 Multilingual support with automatic language detection
+
+### 🔧 Technical Solutions Implemented
+
+#### Audio Format Conversion Pipeline
+```bash
+# Browser records: WebM/Opus format
+# ffmpeg converts: WebM → WAV (16kHz, mono, PCM)
+# Whisper processes: WAV with proper dtype handling
+```
+
+#### Data Type Compatibility Fix
+```python
+# Ensure input matches model precision
+input_features = inputs["input_features"].to(DEVICE)
+if model.dtype == torch.float16:
+    input_features = input_features.half()
+```
+
+#### Dependency Resolution
+```bash
+# Required for ffmpeg audio processing
+brew install speex
+brew link speex
+```
+
+### 📊 Performance Metrics
+- **Transcription Speed**: 0.2-2.5 seconds per audio clip
+- **Audio Conversion**: Sub-second WebM to WAV conversion
+- **Memory Usage**: ~500MB for Whisper-base model
+- **Languages Supported**: 99+ languages via Whisper multilingual model
+- **Accuracy**: High accuracy for clear speech in tested languages
+
+### 🐛 Issues Resolved
+1. **Microphone Access**: ✅ HTTPS + manual permissions
+2. **Audio Format**: ✅ ffmpeg WebM conversion 
+3. **Library Dependencies**: ✅ speex library linking
+4. **Data Type Mismatch**: ✅ FP16 compatibility
+5. **Language Detection**: ✅ Multilingual transcription
+
+### 🎯 Current Capabilities
+- **Complete Audio Input Pipeline**: Record → Convert → Transcribe → Auto-fill
+- **Multilingual Support**: Automatic language detection and transcription
+- **High Performance**: MPS-accelerated inference on Apple Silicon
+- **Browser Integration**: Seamless web UI integration
+- **Real-time Processing**: Near real-time transcription speeds
+
+---
+
+**Status**: Audio input feature fully implemented and operational  
+**Achievement**: Complete voice-to-text workflow with multilingual support  
+**Next Phase Ready**: Full local LLM system with text, vision, and speech capabilities

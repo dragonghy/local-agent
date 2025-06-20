@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Microphone Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Microphone Permission Test</h1>
+    <p>Current URL: <span id="url"></span></p>
+    <p>Protocol: <span id="protocol"></span></p>
+    
+    <button onclick="checkPermission()">Check Permission Status</button>
+    <button onclick="testSimpleAudio()">Test Simple Audio</button>
+    <button onclick="testDetailedAudio()">Test Detailed Audio</button>
+    <button onclick="listDevices()">List Audio Devices</button>
+    
+    <div id="status"></div>
+    
+    <script>
+        // Display current URL info
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('protocol').textContent = window.location.protocol;
+        
+        const status = document.getElementById('status');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            status.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            console.log(`[${type}] ${message}`);
+        }
+        
+        async function checkPermission() {
+            try {
+                if (!navigator.permissions) {
+                    log('navigator.permissions not available', 'error');
+                    return;
+                }
+                
+                const result = await navigator.permissions.query({ name: 'microphone' });
+                log(`Permission status: ${result.state}`, result.state === 'granted' ? 'success' : 'info');
+                
+                result.addEventListener('change', () => {
+                    log(`Permission changed to: ${result.state}`, 'info');
+                });
+            } catch (error) {
+                log(`Permission check error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testSimpleAudio() {
+            try {
+                log('Requesting microphone access...', 'info');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                log('✅ Success! Microphone access granted', 'success');
+                log(`Got ${stream.getAudioTracks().length} audio tracks`, 'success');
+                
+                // Stop the stream
+                stream.getTracks().forEach(track => {
+                    track.stop();
+                    log(`Stopped track: ${track.label}`, 'info');
+                });
+                
+            } catch (error) {
+                log(`❌ Error: ${error.name} - ${error.message}`, 'error');
+                
+                if (error.name === 'NotAllowedError') {
+                    log('User denied permission or browser blocked access', 'error');
+                } else if (error.name === 'NotFoundError') {
+                    log('No microphone found', 'error');
+                } else if (error.name === 'NotReadableError') {
+                    log('Microphone is already in use', 'error');
+                } else if (error.name === 'OverconstrainedError') {
+                    log('Constraints cannot be satisfied', 'error');
+                }
+            }
+        }
+        
+        async function testDetailedAudio() {
+            try {
+                log('Testing with detailed constraints...', 'info');
+                
+                const constraints = {
+                    audio: {
+                        echoCancellation: { ideal: true },
+                        noiseSuppression: { ideal: true },
+                        autoGainControl: { ideal: true },
+                        sampleRate: { ideal: 48000 }
+                    }
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                log('✅ Success with constraints!', 'success');
+                
+                const track = stream.getAudioTracks()[0];
+                const settings = track.getSettings();
+                log(`Settings: ${JSON.stringify(settings, null, 2)}`, 'info');
+                
+                // Test MediaRecorder
+                try {
+                    const recorder = new MediaRecorder(stream);
+                    log('✅ MediaRecorder created successfully', 'success');
+                    log(`Recorder state: ${recorder.state}`, 'info');
+                    log(`MIME type: ${recorder.mimeType}`, 'info');
+                } catch (recError) {
+                    log(`MediaRecorder error: ${recError.message}`, 'error');
+                }
+                
+                // Stop the stream
+                stream.getTracks().forEach(track => track.stop());
+                
+            } catch (error) {
+                log(`❌ Detailed test error: ${error.name} - ${error.message}`, 'error');
+            }
+        }
+        
+        async function listDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                
+                const audioInputs = devices.filter(device => device.kind === 'audioinput');
+                log(`Found ${audioInputs.length} audio input devices:`, 'info');
+                
+                audioInputs.forEach((device, index) => {
+                    log(`  ${index + 1}. ${device.label || 'Unnamed device'} (${device.deviceId})`, 'info');
+                });
+                
+                if (audioInputs.length === 0) {
+                    log('⚠️ No audio input devices found!', 'error');
+                }
+                
+            } catch (error) {
+                log(`Device enumeration error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Check browser compatibility
+        if (!navigator.mediaDevices) {
+            log('❌ navigator.mediaDevices not supported', 'error');
+        } else if (!navigator.mediaDevices.getUserMedia) {
+            log('❌ getUserMedia not supported', 'error');
+        } else {
+            log('✅ getUserMedia is supported', 'success');
+        }
+        
+        // Auto-check permission on load
+        checkPermission();
+    </script>
+</body>
+</html>

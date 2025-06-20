@@ -326,6 +326,57 @@ main {
     background: #555;
 }
 
+/* Audio controls */
+.audio-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.recording-status {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.recording-status.recording {
+    color: #dc3545;
+    animation: pulse 1.5s infinite;
+}
+
+.recording-status.completed {
+    color: #28a745;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.audio-preview {
+    margin-bottom: 20px;
+}
+
+.audio-preview p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.audio-preview audio {
+    width: 100%;
+    margin: 10px 0;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     main {
@@ -339,5 +390,10 @@ main {
     
     .message {
         max-width: 90%;
+    }
+    
+    .audio-controls {
+        flex-direction: column;
+        gap: 5px;
     }
 }

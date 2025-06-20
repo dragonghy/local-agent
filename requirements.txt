@@ -40,3 +40,6 @@ typing_extensions==4.13.2
 urllib3==2.4.0
 uvicorn==0.34.3
 python-multipart==0.0.20
+librosa==0.10.2
+python-dotenv==1.0.0
+openai==1.88.0
